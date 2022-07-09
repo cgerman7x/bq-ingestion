@@ -1,0 +1,4 @@
+apache-beam
+google-cloud-pubsub
+avro
+fastavro~=1.4.12

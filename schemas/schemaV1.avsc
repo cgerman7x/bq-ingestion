@@ -1,0 +1,29 @@
+{
+  "namespace": "german.avro",
+  "type": "record",
+  "name": "schemaV1",
+  "fields": [
+    {
+      "name": "name",
+      "type": "string"
+    },
+    {
+      "name": "middleName",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    {
+      "name": "lastName",
+      "type": "string"
+    },
+    {
+      "name": "age",
+      "type": [
+        "int",
+        "null"
+      ]
+    }
+  ]
+}
