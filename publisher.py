@@ -7,8 +7,10 @@ import pubsub
 
 pp = pprint.PrettyPrinter()
 
-def generate_fake_data(avro_schema, amount = 1):
+
+def generate_fake_data(avro_schema, amount=1):
     return list(generate_many(avro_schema, amount))
+
 
 def main():
     # Open avro schema file and load it as JSON
@@ -19,8 +21,8 @@ def main():
 
         fake_data = generate_fake_data(parsed_schema, 5)
 
-        bytes_writer = BytesIO()
         for fm in fake_data:
+            bytes_writer = BytesIO()
             writer(bytes_writer, parsed_schema, [fm])
             avro_messages_v1.append(bytes_writer.getvalue())
 
@@ -31,14 +33,18 @@ def main():
 
         fake_data = generate_fake_data(parsed_schema, 5)
 
-        bytes_writer = BytesIO()
         for fm in fake_data:
+            bytes_writer = BytesIO()
             writer(bytes_writer, parsed_schema, [fm])
             avro_messages_v2.append(bytes_writer.getvalue())
 
     PubSubManager = pubsub.PubSubManager("operating-day-317714")
-    PubSubManager.publish_messages("projects/operating-day-317714/topics/source-topic", avro_messages_v1, schemaId="schemaV1")
-    PubSubManager.publish_messages("projects/operating-day-317714/topics/source-topic", avro_messages_v2, schemaId="schemaV2")
+    PubSubManager.publish_messages("projects/operating-day-317714/topics/source-topic",
+                                   avro_messages_v1,
+                                   schema_id="schemaV1")
+    PubSubManager.publish_messages("projects/operating-day-317714/topics/source-topic",
+                                   avro_messages_v2,
+                                   schema_id="schemaV2")
 
 
 if __name__ == '__main__':

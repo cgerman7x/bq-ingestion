@@ -1,5 +1,6 @@
 from google.cloud import pubsub_v1
 import time
+import uuid
 
 
 class PubSubManager:
@@ -30,8 +31,9 @@ class PubSubManager:
         self.subscriber.delete_subscription(request={"subscription": subscription_name})
         print(f"Deleted subscription: {subscription_name}")
 
-    def publish_messages(self, topic_name, messages, sleep=1, schemaId=""):
+    def publish_messages(self, topic_name, messages, sleep=1, schema_id=""):
         for msg in messages:
             print("Publishing in Topic")
-            self.publisher.publish(topic_name, msg, schemaId=schemaId)
+            message_identifier = str(uuid.uuid4())
+            self.publisher.publish(topic_name, msg, schema_id=schema_id, message_identifier=message_identifier)
             time.sleep(sleep)
