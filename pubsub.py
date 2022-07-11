@@ -1,5 +1,7 @@
 from google.cloud import pubsub_v1
 import time
+import datetime
+import calendar
 import uuid
 
 
@@ -33,7 +35,14 @@ class PubSubManager:
 
     def publish_messages(self, topic_name, messages, sleep=1, schema_id=""):
         for msg in messages:
-            print("Publishing in Topic")
             message_identifier = str(uuid.uuid4())
-            self.publisher.publish(topic_name, msg, schema_id=schema_id, message_identifier=message_identifier)
+            date = datetime.datetime.utcnow()
+            utc_time = calendar.timegm(date.utctimetuple())
+            message_time = str(utc_time)
+            print(f"Publishing message_identifier={message_identifier} with timestamp={date}")
+            self.publisher.publish(topic_name,
+                                   msg,
+                                   schema_id=schema_id,
+                                   message_identifier=message_identifier,
+                                   message_time=message_time)
             time.sleep(sleep)

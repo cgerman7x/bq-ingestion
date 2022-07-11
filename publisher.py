@@ -8,8 +8,8 @@ import pubsub
 pp = pprint.PrettyPrinter()
 
 
-def generate_fake_data(avro_schema, amount=1):
-    return list(generate_many(avro_schema, amount))
+def generate_fake_data(parsed_schema, amount=1):
+    return list(generate_many(parsed_schema, amount))
 
 
 def main():
@@ -38,13 +38,15 @@ def main():
             writer(bytes_writer, parsed_schema, [fm])
             avro_messages_v2.append(bytes_writer.getvalue())
 
-    PubSubManager = pubsub.PubSubManager("operating-day-317714")
-    PubSubManager.publish_messages("projects/operating-day-317714/topics/source-topic",
-                                   avro_messages_v1,
-                                   schema_id="schemaV1")
-    PubSubManager.publish_messages("projects/operating-day-317714/topics/source-topic",
-                                   avro_messages_v2,
-                                   schema_id="schemaV2")
+    pubsub_manager = pubsub.PubSubManager("operating-day-317714")
+    pubsub_manager.publish_messages("projects/operating-day-317714/topics/source-topic",
+                                    avro_messages_v1,
+                                    sleep=0.5,
+                                    schema_id="schemaV1")
+    pubsub_manager.publish_messages("projects/operating-day-317714/topics/source-topic",
+                                    avro_messages_v2,
+                                    sleep=0.5,
+                                    schema_id="schemaV2")
 
 
 if __name__ == '__main__':

@@ -1,44 +1,60 @@
-from google.cloud import pubsub_v1
-from fastavro import parse_schema, reader
-import time
-import json
-from io import BytesIO
+import random
 
-with open('schemas/schemaV1.avsc', 'rb') as f:
-    avro_schema_v1 = json.loads(f.read())
-    parsed_schema_v1 = parse_schema(avro_schema_v1)
+import apache_beam as beam
+from apache_beam.options.pipeline_options import PipelineOptions, StandardOptions
+from apache_beam import window, WithKeys, GroupByKey, PTransform, ParDo, DoFn
+from random import randint
 
-with open('schemas/schemaV2.avsc', 'rb') as f:
-    avro_schema_v2 = json.loads(f.read())
-    parsed_schema_v2 = parse_schema(avro_schema_v2)
+target_subscription = "projects/operating-day-317714/subscriptions/target-subscription"
 
-subscription_path = "projects/operating-day-317714/subscriptions/target-subscription"
-subscriber = pubsub_v1.SubscriberClient()
+options = PipelineOptions()
+options.view_as(StandardOptions).streaming = True
 
+p = beam.Pipeline(options=options)
 
-def callback(message):
-    print("----------------------------------------------------------------------------------------")
-    print(f"Received message with schemaId: {message.attributes['schema_id']}")
-    print(f"message_identifier: {message.attributes['message_identifier']}")
-    print(f"data: {message.data}")
-
-    if message.attributes['schema_id'] == "schemaV1":
-        bytes_reader = BytesIO(message.data)
-        record = reader(bytes_reader, parsed_schema_v1)
-        for rec in record:
-            print(rec)
-    elif message.attributes['schema_id'] == "schemaV2":
-        bytes_reader = BytesIO(message.data)
-        record = reader(bytes_reader, parsed_schema_v2)
-        for rec in record:
-            print(rec)
-    else:
-        print("Unknown schema for this message")
-
-    message.ack()
+window_size = 2
+num_shards = 4
 
 
-subscriber.subscribe(subscription_path, callback=callback)
+class GroupMessagesByFixedWindows(PTransform):
+    def __init__(self, windows_size=1, num_shards=2):
+        self.window_size = int(window_size)
+        self.num_shards = num_shards
 
-while True:
-    time.sleep(1)
+    def expand(self, pcoll):
+        return (
+                pcoll
+                | 'With timestamp' >> beam.Map(lambda row: beam.window.TimestampedValue(row, int(row.attributes['message_time'])))
+                | 'Create window' >> beam.WindowInto(window.FixedWindows(window_size))
+                | 'Create key' >> WithKeys(lambda row: random.randint(0, num_shards))
+                | 'Group by key' >> GroupByKey()
+        )
+
+
+class WriteToFile(DoFn):
+    def __init__(self):
+        pass
+
+    def process(self, elem, window=DoFn.WindowParam):
+        ts_format = "%H:%M"
+        window_start = window.start.to_utc_datetime().strftime(ts_format)
+        window_end = window.end.to_utc_datetime().strftime(ts_format)
+        shard_id, batch = elem
+        filename = "-".join(["output", window_start, window_end, str(shard_id), ".avro"])
+        # TO DO - checking of schema_id
+        with open(filename, "wb") as f:
+            for message in batch:
+                f.write(message.data)
+
+
+pubsub_pipeline = (
+        p
+        | 'Read from pubsub topic' >> beam.io.ReadFromPubSub(subscription=target_subscription, with_attributes=True)
+        # | beam.Map(print)
+         | 'GroupMessagesByFixedWindows' >> GroupMessagesByFixedWindows(window_size, num_shards)
+        # | beam.Map(print)
+         | 'WriteToFile' >> ParDo(WriteToFile())
+)
+
+result = p.run()
+result.wait_until_finish()
