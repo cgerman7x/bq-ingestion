@@ -19,7 +19,7 @@ def main():
         avro_schema = json.loads(f.read())
         parsed_schema = parse_schema(avro_schema)
 
-        fake_data = generate_fake_data(parsed_schema, 5)
+        fake_data = generate_fake_data(parsed_schema, 100)
 
         for fm in fake_data:
             bytes_writer = BytesIO()
@@ -31,7 +31,7 @@ def main():
         avro_schema = json.loads(f.read())
         parsed_schema = parse_schema(avro_schema)
 
-        fake_data = generate_fake_data(parsed_schema, 5)
+        fake_data = generate_fake_data(parsed_schema, 100)
 
         for fm in fake_data:
             bytes_writer = BytesIO()
@@ -41,11 +41,11 @@ def main():
     pubsub_manager = pubsub.PubSubManager("operating-day-317714")
     pubsub_manager.publish_messages("projects/operating-day-317714/topics/source-topic",
                                     avro_messages_v1,
-                                    sleep=0.5,
+                                    sleep=0.1,
                                     schema_id="schemaV1")
     pubsub_manager.publish_messages("projects/operating-day-317714/topics/source-topic",
                                     avro_messages_v2,
-                                    sleep=0.5,
+                                    sleep=0.1,
                                     schema_id="schemaV2")
 
 
