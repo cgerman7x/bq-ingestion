@@ -39,7 +39,7 @@ class PubSubManager:
             date = datetime.datetime.utcnow()
             utc_time = calendar.timegm(date.utctimetuple())
             message_time = str(utc_time)
-            print(f"Publishing message_identifier={message_identifier} with timestamp={date}")
+            print(f"Publishing message_identifier={message_identifier} with timestamp={date} and schema_id={schema_id}")
             self.publisher.publish(topic_name,
                                    msg,
                                    schema_id=schema_id,

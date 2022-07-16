@@ -5,16 +5,19 @@ from apache_beam import window, WithKeys, GroupByKey, PTransform, ParDo, DoFn
 from fastavro import parse_schema, writer, reader
 import json
 from io import BytesIO
+import os
+from datetime import datetime, timezone
 
 target_subscription = "projects/operating-day-317714/subscriptions/target-subscription"
+cloud_storage_bucket = False
 
 options = PipelineOptions()
 options.view_as(StandardOptions).streaming = True
 
 p = beam.Pipeline(options=options)
 
-window_size = 10
-num_shards = 1
+window_size = 60
+num_shards = 3
 
 with open('schemas/schemaV1.avsc', 'rb') as f:
     avro_schema = json.loads(f.read())
@@ -50,14 +53,31 @@ class WriteToFile(DoFn):
         for rec in record:
             return rec;
 
+    def create_directory(self, technical_date, schema_id):
+        dt = f"dt={technical_date.year}-{str(technical_date.month).zfill(2)}-{str(technical_date.day).zfill(2)}"
+        schema_folder = f"schemaId={schema_id}"
+        relative_path = os.path.join(dt, schema_folder)
+
+        if not os.path.exists(f"./{relative_path}"):
+            os.makedirs(f"./{relative_path}")
+
+        return relative_path
+
     def write_avro_file(self, schema_id, avro_messages, parsed_schema, shard_id, window):
         ts_format = "%Y%m%d_%H%M%S"
+        d_format = "%Y%m%d"
         window_start = window.start.to_utc_datetime().strftime(ts_format)
         window_end = window.end.to_utc_datetime().strftime(ts_format)
+        technical_date = datetime.now(timezone.utc)
 
+        relative_path = ""
         if len(avro_messages) > 0:
-            filename = "-".join([schema_id, window_start, window_end, str(shard_id)]) + ".avro"
-            with open(filename, "wb") as f:
+            if not cloud_storage_bucket:
+                relative_path = self.create_directory(technical_date, schema_id)
+
+            filename = "-".join(["messages", window_start, window_end, str(shard_id)]) + ".avro"
+            full_path = os.path.join(relative_path, filename)
+            with open(full_path, "wb") as f:
                 writer(f, parsed_schema, avro_messages)
 
     def process(self, elem, window=DoFn.WindowParam):
