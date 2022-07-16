@@ -16,16 +16,15 @@ options.view_as(StandardOptions).streaming = True
 
 p = beam.Pipeline(options=options)
 
-window_size = 60
+window_size = 10
 num_shards = 3
+parsed_schema = {}
+valid_schemas = ["schemaV1", "schemaV2"]
 
-with open('schemas/schemaV1.avsc', 'rb') as f:
-    avro_schema = json.loads(f.read())
-    parsed_schema_v1 = parse_schema(avro_schema)
-
-with open('schemas/schemaV2.avsc', 'rb') as f:
-    avro_schema = json.loads(f.read())
-    parsed_schema_v2 = parse_schema(avro_schema)
+for schema_id in valid_schemas:
+    with open(f'schemas/{schema_id}.avsc', 'rb') as f:
+        avro_schema = json.loads(f.read())
+        parsed_schema.setdefault(schema_id, parse_schema(avro_schema))
 
 
 class GroupMessagesByFixedWindows(PTransform):
@@ -65,13 +64,13 @@ class WriteToFile(DoFn):
 
     def write_avro_file(self, schema_id, avro_messages, parsed_schema, shard_id, window):
         ts_format = "%Y%m%d_%H%M%S"
-        d_format = "%Y%m%d"
         window_start = window.start.to_utc_datetime().strftime(ts_format)
         window_end = window.end.to_utc_datetime().strftime(ts_format)
         technical_date = datetime.now(timezone.utc)
 
         relative_path = ""
         if len(avro_messages) > 0:
+            # Create hive's style directory name if working local
             if not cloud_storage_bucket:
                 relative_path = self.create_directory(technical_date, schema_id)
 
@@ -81,23 +80,27 @@ class WriteToFile(DoFn):
                 writer(f, parsed_schema, avro_messages)
 
     def process(self, elem, window=DoFn.WindowParam):
+        # Get shard id and batch of messages
         shard_id, batch = elem
-        avro_messages_v1 = []
-        avro_messages_v2 = []
+        avro_messages = {}
+
+        # We need to decode each message according to the AVRO schema specified by the pub/sub attribute
         for message in batch:
             print(f'Received {message.attributes["schema_id"]}')
-            if message.attributes["schema_id"] == "schemaV1":
-                message_decoded = self.decode_message("schemaV1", parsed_schema_v1, message)
-                if message_decoded:
-                    avro_messages_v1.append(message_decoded)
-            elif message.attributes["schema_id"] == "schemaV2":
-                message_decoded = self.decode_message("schemaV2", parsed_schema_v2, message)
-                if message_decoded:
-                    avro_messages_v2.append(message_decoded)
+            # We only consume known schemas
+            if message.attributes["schema_id"] in valid_schemas:
+                message_decoded = self.decode_message(message.attributes["schema_id"],
+                                                      parsed_schema[message.attributes["schema_id"]],
+                                                      message)
 
-        # Write avro files if content exist
-        self.write_avro_file("schemaV1", avro_messages_v1, parsed_schema_v1, shard_id, window)
-        self.write_avro_file("schemaV2", avro_messages_v2, parsed_schema_v2, shard_id, window)
+                # If the message was decoded fine into a json, we encode it again and queue it for later writing
+                if message_decoded:
+                    avro_messages.setdefault(message.attributes["schema_id"], [])
+                    avro_messages[f'{message.attributes["schema_id"]}'].append(message_decoded)
+
+        # Write avro files
+        for schema_id, encoded_messages in avro_messages.items():
+            self.write_avro_file(schema_id, encoded_messages, parsed_schema[schema_id], shard_id, window)
 
 
 pubsub_pipeline = (

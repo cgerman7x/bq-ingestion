@@ -17,7 +17,7 @@ def main():
         avro_schema = json.loads(f.read())
         parsed_schema = parse_schema(avro_schema)
 
-        fake_data = generate_fake_data(parsed_schema, 250)
+        fake_data = generate_fake_data(parsed_schema, 10)
 
         for fm in fake_data:
             bytes_writer = BytesIO()
@@ -29,7 +29,7 @@ def main():
         avro_schema = json.loads(f.read())
         parsed_schema = parse_schema(avro_schema)
 
-        fake_data = generate_fake_data(parsed_schema, 250)
+        fake_data = generate_fake_data(parsed_schema, 10)
 
         for fm in fake_data:
             bytes_writer = BytesIO()
