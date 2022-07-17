@@ -7,28 +7,13 @@ import json
 from io import BytesIO
 import os
 from datetime import datetime, timezone
+import logging
 
-target_subscription = "projects/operating-day-317714/subscriptions/target-subscription"
-cloud_storage_bucket = False
-
-options = PipelineOptions()
-options.view_as(StandardOptions).streaming = True
-
-p = beam.Pipeline(options=options)
-
-window_size = 10
-num_shards = 3
-parsed_schema = {}
-valid_schemas = ["schemaV1", "schemaV2"]
-
-for schema_id in valid_schemas:
-    with open(f'schemas/{schema_id}.avsc', 'rb') as f:
-        avro_schema = json.loads(f.read())
-        parsed_schema.setdefault(schema_id, parse_schema(avro_schema))
+logging.basicConfig(level=logging.INFO)
 
 
 class GroupMessagesByFixedWindows(PTransform):
-    def __init__(self, windows_size=1, num_shards=2):
+    def __init__(self, window_size, num_shards):
         self.window_size = int(window_size)
         self.num_shards = num_shards
 
@@ -36,15 +21,17 @@ class GroupMessagesByFixedWindows(PTransform):
         return (
                 pcoll
                 | 'With timestamp' >> beam.Map(lambda row: beam.window.TimestampedValue(row, int(row.attributes['message_time'])))
-                | 'Create window' >> beam.WindowInto(window.FixedWindows(window_size))
-                | 'Create key' >> WithKeys(lambda row: random.randint(0, num_shards))
+                | 'Create window' >> beam.WindowInto(window.FixedWindows(self.window_size))
+                | 'Create key' >> WithKeys(lambda row: random.randint(0, self.num_shards))
                 | 'Group by key' >> GroupByKey()
         )
 
 
 class WriteToFile(DoFn):
-    def __init__(self):
-        pass
+    def __init__(self, valid_schemas, parsed_schemas, cloud_storage_bucket):
+        self.valid_schemas = valid_schemas
+        self.parsed_schemas = parsed_schemas
+        self.cloud_storage_bucket = cloud_storage_bucket
 
     def decode_message(self, schema_id, parsed_schema, message):
         bytes_reader = BytesIO(message.data)
@@ -54,8 +41,9 @@ class WriteToFile(DoFn):
 
     def create_directory(self, technical_date, schema_id):
         dt = f"dt={technical_date.year}-{str(technical_date.month).zfill(2)}-{str(technical_date.day).zfill(2)}"
-        schema_folder = f"schemaId={schema_id}"
-        relative_path = os.path.join(dt, schema_folder)
+        schema_folder = f"{schema_id}"
+        prefix_folder = "transactions"
+        relative_path = os.path.join(prefix_folder, dt, schema_folder)
 
         if not os.path.exists(f"./{relative_path}"):
             os.makedirs(f"./{relative_path}")
@@ -71,7 +59,7 @@ class WriteToFile(DoFn):
         relative_path = ""
         if len(avro_messages) > 0:
             # Create hive's style directory name if working local
-            if not cloud_storage_bucket:
+            if not self.cloud_storage_bucket:
                 relative_path = self.create_directory(technical_date, schema_id)
 
             filename = "-".join(["messages", window_start, window_end, str(shard_id)]) + ".avro"
@@ -86,29 +74,58 @@ class WriteToFile(DoFn):
 
         # We need to decode each message according to the AVRO schema specified by the pub/sub attribute
         for message in batch:
-            print(f'Received {message.attributes["schema_id"]}')
+            schema_id = message.attributes["schema_id"]
+
+            logging.info(f'Shard {shard_id} received {schema_id}')
             # We only consume known schemas
-            if message.attributes["schema_id"] in valid_schemas:
+            if schema_id in self.valid_schemas:
                 message_decoded = self.decode_message(message.attributes["schema_id"],
-                                                      parsed_schema[message.attributes["schema_id"]],
+                                                      self.parsed_schemas[schema_id],
                                                       message)
 
                 # If the message was decoded fine into a json, we encode it again and queue it for later writing
                 if message_decoded:
-                    avro_messages.setdefault(message.attributes["schema_id"], [])
-                    avro_messages[f'{message.attributes["schema_id"]}'].append(message_decoded)
+                    avro_messages.setdefault(schema_id, [])
+                    avro_messages[f'{schema_id}'].append(message_decoded)
+            elif len(schema_id) > 0:
+                logging.info(f'Received a message with a not known schema_id attribute')
+            else:
+                logging.info(f'Received a message without schema_id attribute')
 
         # Write avro files
-        for schema_id, encoded_messages in avro_messages.items():
-            self.write_avro_file(schema_id, encoded_messages, parsed_schema[schema_id], shard_id, window)
+        for sch_id, encoded_messages in avro_messages.items():
+            self.write_avro_file(sch_id, encoded_messages, self.parsed_schemas[sch_id], shard_id, window)
 
 
-pubsub_pipeline = (
-        p
-        | 'Read from pubsub topic' >> beam.io.ReadFromPubSub(subscription=target_subscription, with_attributes=True)
-        | 'GroupMessagesByFixedWindows' >> GroupMessagesByFixedWindows(window_size, num_shards)
-        | 'WriteToFile' >> ParDo(WriteToFile())
-)
+def main():
+    target_subscription = "projects/operating-day-317714/subscriptions/target-subscription"
+    cloud_storage_bucket = False
 
-result = p.run()
-result.wait_until_finish()
+    options = PipelineOptions()
+    options.view_as(StandardOptions).streaming = True
+
+    p = beam.Pipeline(options=options)
+
+    window_size = 10
+    num_shards = 3
+    valid_schemas = ["schemaV1", "schemaV2"]
+    parsed_schemas = {}
+
+    for schema_id in valid_schemas:
+        with open(f'schemas/{schema_id}.avsc', 'rb') as f:
+            avro_schema = json.loads(f.read())
+            parsed_schemas.setdefault(schema_id, parse_schema(avro_schema))
+
+    pubsub_pipeline = (
+            p
+            | 'Read from pubsub topic' >> beam.io.ReadFromPubSub(subscription=target_subscription, with_attributes=True)
+            | 'GroupMessagesByFixedWindows' >> GroupMessagesByFixedWindows(window_size=window_size, num_shards=num_shards)
+            | 'WriteToFile' >> ParDo(WriteToFile(valid_schemas, parsed_schemas, cloud_storage_bucket))
+    )
+
+    result = p.run()
+    result.wait_until_finish()
+
+
+if __name__ == '__main__':
+    main()
