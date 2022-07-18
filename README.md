@@ -32,7 +32,7 @@ set PUBSUB_EMULATOR_HOST=localhost:8085
 Please, do not forget the $ at the beginning! :-)
 
 ```
-$env:PUBSUB_PROJECT_ID = "operating-day-317714"<br>
+$env:PUBSUB_PROJECT_ID = "operating-day-317714"
 $env:PUBSUB_EMULATOR_HOST = "localhost:8085"
 ```
 
