@@ -45,22 +45,26 @@ gcloud beta emulators pubsub start --project=operating-day-317714
 ```
 
 <h2>Create the topic and the subscription</h2>
+
 ```
 python create_pubsub_resources.py
 ```
 
 <h2>Start the Subscriber (Dataflow job with DirectRunner)</h2>
+
 ```
 python subscriber.py
 ```
 
 <h2>Start the Publisher</h2>
+
 ```
 python publisher.py
 ```
 
 <h2>Ingest data into BigQuery using bq command</h2>
 Once the files are created, you can ingest them into BigQuery with the following command:
+
 ```
 bq load --source_format=AVRO --hive_partitioning_mode=CUSTOM --hive_partitioning_source_uri_prefix="gs://<bucket_name>/transactions/{dt:DATE}" <dataset_name>.<table_name> gs://<bucket_name>/transactions/dt=<date>/<schemaId>/*
 ```
