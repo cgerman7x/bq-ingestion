@@ -11,15 +11,22 @@ pip install -r requirements.txt
 <h2>Local Pub/Sub emulator installation</h2>
 Install the local pub/sub emulator following the instructions: https://cloud.google.com/pubsub/docs/emulator
 
+<h2>Start the local pub/sub emulator</h2>
+You can start it with a fake project_id as follows:
+
+```
+gcloud beta emulators pubsub start --project=operating-day-317714
+```
+
 <h2>Environmental variables for local pub/sub emulator</h2>
 
-Before executing any script you need to set up the environmental variables:
+Before executing any script you need to set up the environmental variables related to pub/sub using a fake project id on each terminal that you are using:
 
 <h3>Windows Command Line</h3>
 
 ```
-set PUBSUB_PROJECT_ID=operating-day-317714<br>
-set PUBSUB_EMULATOR_HOST=localhost:8085
+set PUBSUB_PROJECT_ID="operating-day-317714"
+set PUBSUB_EMULATOR_HOST="localhost:8085"
 ```
 
 <h3>Windows Power Shell</h3>
@@ -35,13 +42,6 @@ $env:PUBSUB_EMULATOR_HOST = "localhost:8085"
 
 ```
 $(gcloud beta emulators pubsub env-init)
-```
-
-<h2>Start the local pub/sub emulator</h2>
-You can start it with a fake project_id as follows:
-
-```
-gcloud beta emulators pubsub start --project=operating-day-317714
 ```
 
 <h2>Create the topic and the subscription</h2>
