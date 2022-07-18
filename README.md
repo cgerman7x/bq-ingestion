@@ -1,5 +1,5 @@
 # bq-ingestion
-Quick POC of BigQuery ingestion using PubSub messages with different AVRO schemas
+Quick POC of BigQuery ingestion that generates pub/sub messages that are consumed by a dataflow job that generates output AVRO files in different folders based on their AVRO schema. 
 
 <h1>Install python packages</h1>
 
