@@ -1,0 +1,11 @@
+{
+  "namespace": "german.avro",
+  "type": "record",
+  "name": "schemaV3",
+  "fields": [
+    {
+      "name": "fullName",
+      "type": "string"
+    }
+  ]
+}

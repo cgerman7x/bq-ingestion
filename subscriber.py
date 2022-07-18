@@ -76,21 +76,23 @@ class WriteToFile(DoFn):
         for message in batch:
             schema_id = message.attributes["schema_id"]
 
-            logging.info(f'Shard {shard_id} received {schema_id}')
+            logging.info(f'Shard {shard_id} received {schema_id if len(schema_id) > 0 else "no_schema"}')
             # We only consume known schemas
             if schema_id in self.valid_schemas:
-                message_decoded = self.decode_message(message.attributes["schema_id"],
-                                                      self.parsed_schemas[schema_id],
-                                                      message)
-
-                # If the message was decoded fine into a json, we encode it again and queue it for later writing
-                if message_decoded:
-                    avro_messages.setdefault(schema_id, [])
-                    avro_messages[f'{schema_id}'].append(message_decoded)
+                try:
+                    message_decoded = self.decode_message(schema_id,
+                                                          self.parsed_schemas[schema_id],
+                                                          message)
+                    # If the message was decoded fine into a json, we encode it again and queue it for later writing
+                    if message_decoded:
+                        avro_messages.setdefault(schema_id, [])
+                        avro_messages[f'{schema_id}'].append(message_decoded)
+                except Exception as e:
+                    logging.error(f'Unable to parse message {message} with schema_id attribute {schema_id}')
             elif len(schema_id) > 0:
-                logging.info(f'Received a message with a not known schema_id attribute')
+                logging.error('Received a message with an unknown schema_id attribute')
             else:
-                logging.info(f'Received a message without schema_id attribute')
+                logging.error('Received a message without schema_id attribute')
 
         # Write avro files
         for sch_id, encoded_messages in avro_messages.items():
