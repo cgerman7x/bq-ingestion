@@ -20,7 +20,7 @@ gcloud beta emulators pubsub start --project=operating-day-317714
 
 <h2>Environmental variables for local pub/sub emulator</h2>
 
-Before executing any script you need to set up the environmental variables related to pub/sub using a fake project id on each terminal that you are using:
+You need to set up the environmental variables related to pub/sub using the same fake project id from above on each terminal where you plan to launch the below python scripts:
 
 <h3>Windows Command Line</h3>
 
