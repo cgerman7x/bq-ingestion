@@ -1,5 +1,5 @@
 # bq-ingestion
-Test of BigQuery ingestion using PubSub messages with different AVRO schemas
+Quick POC of BigQuery ingestion using PubSub messages with different AVRO schemas
 
 <h1>Install python packages</h1>
 
