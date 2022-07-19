@@ -37,7 +37,12 @@ class WriteToFile(DoFn):
         bytes_reader = BytesIO(message.data)
         record = reader(bytes_reader, parsed_schema)
         for rec in record:
-            return rec;
+            return rec
+
+    def get_writer_schema(self, message):
+        bytes_reader = BytesIO(message.data)
+        record = reader(bytes_reader)
+        return record.writer_schema
 
     def create_directory(self, technical_date, schema_id):
         dt = f"dt={technical_date.year}-{str(technical_date.month).zfill(2)}-{str(technical_date.day).zfill(2)}"
@@ -91,12 +96,24 @@ class WriteToFile(DoFn):
                     logging.error(f'Unable to parse message {message} with schema_id attribute {schema_id}')
             elif len(schema_id) > 0:
                 logging.error('Received a message with an unknown schema_id attribute')
+                writer_schema = self.get_writer_schema(message)
+                self.parsed_schemas.setdefault(schema_id, writer_schema)
+
+                try:
+                    message_decoded = self.decode_message(schema_id,
+                                                          self.parsed_schemas[schema_id],
+                                                          message)
+                    if message_decoded:
+                        avro_messages.setdefault(schema_id, [])
+                        avro_messages[f'{schema_id}'].append(message_decoded)
+                except Exception as e:
+                    logging.error(f'Unable to parse message {message} with unknown schema_id attribute {schema_id}')
             else:
                 logging.error('Received a message without schema_id attribute')
 
         # Write avro files
-        for sch_id, encoded_messages in avro_messages.items():
-            self.write_avro_file(sch_id, encoded_messages, self.parsed_schemas[sch_id], shard_id, window)
+        for sch_id, messages_decoded in avro_messages.items():
+            self.write_avro_file(sch_id, messages_decoded, self.parsed_schemas[sch_id], shard_id, window)
 
 
 def main():

@@ -48,7 +48,7 @@ def main():
         avro_schema = json.loads(f.read())
         parsed_schema = parse_schema(avro_schema)
 
-        fake_data = generate_fake_data(parsed_schema, 1)
+        fake_data = generate_fake_data(parsed_schema, 10)
 
         for msg in fake_data:
             avro_messages_v3.append(encode_message(parsed_schema, msg))
