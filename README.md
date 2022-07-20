@@ -3,12 +3,12 @@ Quick POC of BigQuery ingestion that generates pub/sub messages that are consume
 
 It creates a pub/sub topic and subscription. All pub/sub messages are created with a <b>schema_id</b> attribute that specified the schema version used to generate the AVRO encoded payload. 
 
-The publisher produces several messages:
+The publisher produces several messages with:
 <ol>
-    <li>with a valid schema_id attribute that the subscriber knows</li>
-    <li>with an unknown schema_id attribute</li>
-    <li>with an invalid payload and no schema_id attribute</li>
-    <li>with an invalid payload and a valid schema_id attribute</li>
+    <li>A valid schema_id attribute that the subscriber knows</li>
+    <li>An unknown schema_id attribute</li>
+    <li>An invalid payload and no schema_id attribute</li>
+    <li>An invalid payload and a valid schema_id attribute</li>
 </ol>
 
 The subscriber is a Dataflow job that processes messages:
