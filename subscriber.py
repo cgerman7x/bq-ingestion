@@ -42,6 +42,7 @@ class WriteToFile(DoFn):
     def get_writer_schema(self, message):
         bytes_reader = BytesIO(message.data)
         record = reader(bytes_reader)
+
         return record.writer_schema
 
     def create_directory(self, technical_date, schema_id):
@@ -81,7 +82,7 @@ class WriteToFile(DoFn):
         for message in batch:
             schema_id = message.attributes["schema_id"]
 
-            logging.info(f'Shard {shard_id} received {schema_id if len(schema_id) > 0 else "no_schema"}')
+            logging.info(f'Shard {shard_id} received schema_id attribute {schema_id if len(schema_id) > 0 else "<no_schema>"}')
             # We only consume known schemas
             if schema_id in self.valid_schemas:
                 try:
@@ -95,7 +96,7 @@ class WriteToFile(DoFn):
                 except Exception as e:
                     logging.error(f'Unable to parse message {message} with schema_id attribute {schema_id}')
             elif len(schema_id) > 0:
-                logging.error('Received a message with an unknown schema_id attribute')
+                logging.warning(f'Received a message with an unknown schema_id attribute {schema_id}')
                 writer_schema = self.get_writer_schema(message)
                 self.parsed_schemas.setdefault(schema_id, writer_schema)
 

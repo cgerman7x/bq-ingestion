@@ -1,5 +1,22 @@
 # bq-ingestion
-Quick POC of BigQuery ingestion that generates pub/sub messages that are consumed by a dataflow job that generates output AVRO files in different folders based on their AVRO schema. 
+Quick POC of BigQuery ingestion that generates pub/sub messages that are consumed by a dataflow job that generates output AVRO files in different folders based on their AVRO schema.
+
+It creates a pub/sub topic and subscription. All pub/sub messages are created with a <b>schema_id</b> attribute that specified the schema version used to generate the AVRO encoded payload. 
+
+The publisher produces several messages:
+<ol>
+    <li>with a valid schema_id attribute that the subscriber knows</li>
+    <li>with an unknown schema_id attribute</li>
+    <li>with an invalid payload and no schema_id attribute</li>
+    <li>with an invalid payload and a valid schema_id attribute</li>
+</ol>
+
+The subscriber is a Dataflow job that processes messages:
+<ul>
+    <li>For cases 1 and 2 it processes business as usual because it already knows that they are known schemas</li>
+    <li>For case 3, it uses the <b>writer schema</b> to consume these messages simulating a new schema_id being deployed in the source system</li>
+    <li>For case 4, it generates an error message</li>
+</ul>
 
 <h1>Install python packages</h1>
 
