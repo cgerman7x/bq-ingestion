@@ -79,6 +79,9 @@ python subscriber.py
 python publisher.py
 ```
 
+<h2>Create the tables in BigQuery</h2>
+TODO
+
 <h2>Ingest data into BigQuery using bq command</h2>
 Once the files are created, you can ingest them into BigQuery with the following command:
 
