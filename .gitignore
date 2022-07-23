@@ -133,3 +133,5 @@ dmypy.json
 *.avro
 
 /dt*
+
+gcp-keys/

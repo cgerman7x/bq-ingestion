@@ -1,7 +1,7 @@
 import random
 import apache_beam as beam
 from apache_beam.options.pipeline_options import PipelineOptions, StandardOptions
-from apache_beam import window, WithKeys, GroupByKey, PTransform, ParDo, DoFn
+from apache_beam import window, WithKeys, GroupByKey, PTransform, ParDo, DoFn, io as gcpio
 from fastavro import parse_schema, writer, reader
 import json
 from io import BytesIO
@@ -45,12 +45,7 @@ class WriteToFile(DoFn):
 
         return record.writer_schema
 
-    def create_directory(self, technical_date, schema_id):
-        dt = f"dt={technical_date.year}-{str(technical_date.month).zfill(2)}-{str(technical_date.day).zfill(2)}"
-        schema_folder = f"{schema_id}"
-        prefix_folder = "transactions"
-        relative_path = os.path.join(prefix_folder, dt, schema_folder)
-
+    def create_directory(self, relative_path):
         if not os.path.exists(f"./{relative_path}"):
             os.makedirs(f"./{relative_path}")
 
@@ -65,13 +60,25 @@ class WriteToFile(DoFn):
         relative_path = ""
         if len(avro_messages) > 0:
             # Create hive's style directory name if working local
-            if not self.cloud_storage_bucket:
-                relative_path = self.create_directory(technical_date, schema_id)
+            dt = f"dt={technical_date.year}-{str(technical_date.month).zfill(2)}-{str(technical_date.day).zfill(2)}"
+            schema_folder = f"{schema_id}"
+            prefix_folder = "transactions"
+            relative_path = os.path.join(prefix_folder, dt, schema_folder)
+
+            if self.cloud_storage_bucket.startswith('gs://'):
+                full_path = os.path.join(self.cloud_storage_bucket, relative_path)
+            else:
+                full_path = self.create_directory(relative_path)
 
             filename = "-".join(["messages", window_start, window_end, str(shard_id)]) + ".avro"
-            full_path = os.path.join(relative_path, filename)
-            with open(full_path, "wb") as f:
-                writer(f, parsed_schema, avro_messages)
+            full_path_file_name = os.path.join(full_path, filename)
+
+            if self.cloud_storage_bucket.startswith('gs://'):
+                with gcpio.gcsio.GcsIO().open(filename=full_path_file_name, mode="wb") as f:
+                    writer(f, parsed_schema, avro_messages)
+            else:
+                with open(full_path_file_name, "wb") as f:
+                    writer(f, parsed_schema, avro_messages)
 
     def process(self, elem, window=DoFn.WindowParam):
         # Get shard id and batch of messages
@@ -119,7 +126,7 @@ class WriteToFile(DoFn):
 
 def main():
     target_subscription = "projects/operating-day-317714/subscriptions/target-subscription"
-    cloud_storage_bucket = False
+    cloud_storage_bucket = ""
 
     options = PipelineOptions()
     options.view_as(StandardOptions).streaming = True
