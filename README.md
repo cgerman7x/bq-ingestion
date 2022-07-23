@@ -80,6 +80,7 @@ python publisher.py
 ```
 
 <h2>Create tables in BigQuery</h2>
+
 ```
 CREATE TABLE `<project_id>.<dataset_name>.schemaV1`
 (
