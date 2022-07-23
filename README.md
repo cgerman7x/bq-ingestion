@@ -1,5 +1,5 @@
 # bq-ingestion
-Quick POC of BigQuery ingestion that generates pub/sub messages that are consumed by a dataflow job that generates output AVRO files in different folders based on their AVRO schema.
+POC about BigQuery ingestion that generates pub/sub messages that are consumed by a dataflow job that generates output AVRO files in different folders based on their AVRO schema.
 
 It creates a pub/sub topic and subscription. All pub/sub messages are created with a <b>schema_id</b> attribute that specified the schema version used to generate the AVRO encoded payload. 
 
@@ -79,8 +79,29 @@ python subscriber.py
 python publisher.py
 ```
 
-<h2>Create the tables in BigQuery</h2>
-TODO
+<h2>Create tables in BigQuery</h2>
+```
+CREATE TABLE `<project_id>.<dataset_name>.schemaV1`
+(
+  name STRING NOT NULL,
+  middleName STRING,
+  lastName STRING NOT NULL,
+  age INT64,
+  dt DATE
+)
+PARTITION BY dt;
+
+CREATE TABLE `<project_id>.<dataset_name>.schemaV2`
+(
+  name STRING NOT NULL,
+  middleName STRING,
+  lastName STRING NOT NULL,
+  age INT64,
+  address STRING NOT NULL,
+  dt DATE
+)
+PARTITION BY dt;
+```
 
 <h2>Ingest data into BigQuery using bq command</h2>
 Once the files are created, you can ingest them into BigQuery with the following command:
