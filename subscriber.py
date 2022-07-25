@@ -33,7 +33,7 @@ class WriteToFile(DoFn):
         self.parsed_schemas = parsed_schemas
         self.cloud_storage_bucket = cloud_storage_bucket
 
-    def decode_message(self, schema_id, parsed_schema, message):
+    def decode_message(self, parsed_schema, message):
         bytes_reader = BytesIO(message.data)
         record = reader(bytes_reader, parsed_schema)
         for rec in record:
@@ -93,8 +93,7 @@ class WriteToFile(DoFn):
             # We only consume known schemas
             if schema_id in self.valid_schemas:
                 try:
-                    message_decoded = self.decode_message(schema_id,
-                                                          self.parsed_schemas[schema_id],
+                    message_decoded = self.decode_message(self.parsed_schemas[schema_id],
                                                           message)
                     # If the message was decoded fine into a json, we encode it again and queue it for later writing
                     if message_decoded:
@@ -108,8 +107,7 @@ class WriteToFile(DoFn):
                 self.parsed_schemas.setdefault(schema_id, writer_schema)
 
                 try:
-                    message_decoded = self.decode_message(schema_id,
-                                                          self.parsed_schemas[schema_id],
+                    message_decoded = self.decode_message(self.parsed_schemas[schema_id],
                                                           message)
                     if message_decoded:
                         avro_messages.setdefault(schema_id, [])
