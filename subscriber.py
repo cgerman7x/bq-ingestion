@@ -22,7 +22,7 @@ class GroupMessagesByFixedWindows(PTransform):
     def expand(self, pcoll):
         return (
                 pcoll
-                | 'With timestamp' >> beam.Map(lambda row: beam.window.TimestampedValue(row, int(row.attributes['message_time'])))
+                | 'With timestamp' >> beam.Map(lambda row: beam.window.TimestampedValue(row, int(row.attributes['ext_message_time'])))
                 | 'Create window' >> beam.WindowInto(window.FixedWindows(self.window_size),
                                                      allowed_lateness=Duration(seconds=self.allowed_lateness))
                 | 'Create key' >> WithKeys(lambda row: random.randint(0, self.num_shards))
@@ -65,7 +65,6 @@ class WriteToFile(DoFn):
         technical_date = datetime.now(timezone.utc)
         point_in_time = technical_date.strftime(ts_format_with_ms)
 
-        relative_path = ""
         if len(avro_messages) > 0:
             # Create hive's style directory name if working local
             dt = f"dt={technical_date.year}-{str(technical_date.month).zfill(2)}-{str(technical_date.day).zfill(2)}"
@@ -76,8 +75,12 @@ class WriteToFile(DoFn):
 
             filename = "-".join(["messages", window_start, window_end, point_in_time, str(shard_id)]) + ".avro"
             full_path_file_name = os.path.join(full_path, filename)
-            with open(full_path_file_name, "wb") as f:
-                writer(f, parsed_schema, avro_messages)
+
+            if not os.path.exists(full_path_file_name):
+                with open(full_path_file_name, "wb") as f:
+                    writer(f, parsed_schema, avro_messages)
+            else:
+                logging.error(f"The file {full_path_file_name} already exist")
 
     def process(self, elem, window=DoFn.WindowParam):
         # Get shard id and batch of messages
@@ -86,9 +89,12 @@ class WriteToFile(DoFn):
 
         # We need to decode each message according to the AVRO schema specified by the pub/sub attribute
         for message in batch:
+            message_id = message.message_id
+            ext_message_id = message.attributes["ext_message_id"]
             schema_id = message.attributes["schema_id"]
 
-            logging.info(f'Shard {shard_id} received schema_id attribute {schema_id if len(schema_id) > 0 else "<no_schema>"}')
+            logging.info(f'Shard {shard_id} received message_id={message_id}, ext_message_id={ext_message_id} '  
+                         f'and schema_id={schema_id if len(schema_id) > 0 else "no_schema"}')
             # We only consume known schemas
             if schema_id in self.valid_schemas:
                 try:

@@ -39,14 +39,17 @@ class PubSubManager:
 
     def publish_messages(self, topic_name, messages, sleep=1, schema_id=""):
         for msg in messages:
-            message_identifier = str(uuid.uuid4())
+            ext_message_id = str(uuid.uuid4())
             date = datetime.datetime.utcnow() - datetime.timedelta(minutes=0)
             utc_time = calendar.timegm(date.utctimetuple())
-            message_time = str(utc_time)
-            self.logger.info(f"Publishing message_identifier={message_identifier} with timestamp={date} and schema_id={schema_id}")
-            self.publisher.publish(topic_name,
-                                   msg,
-                                   schema_id=schema_id,
-                                   message_identifier=message_identifier,
-                                   message_time=message_time)
+            ext_message_time = str(utc_time)
+
+            future = self.publisher.publish(topic_name,
+                                            msg,
+                                            ext_message_id=ext_message_id,
+                                            ext_message_time = ext_message_time,
+                                            schema_id=schema_id)
+            message_id = future.result()
+            self.logger.info(
+                f"Publishing message_id={message_id}, ext_message_id={ext_message_id}, with ext_message_time={date} and schema_id={schema_id}")
             time.sleep(sleep)

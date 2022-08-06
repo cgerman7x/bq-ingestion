@@ -1,7 +1,9 @@
 # bq-ingestion
 POC about BigQuery ingestion that generates pub/sub messages that are consumed by a dataflow job that generates output AVRO files in different folders based on their AVRO schema.
 
-It creates a pub/sub topic and subscription. All pub/sub messages are created with a <b>schema_id</b> attribute that specified the schema version used to generate the AVRO encoded payload. 
+It creates a pub/sub topic and subscription. All pub/sub messages are created with a <b>schema_id</b> attribute that specified the schema version used to generate the AVRO encoded payload.
+
+A message_time attribute is added when the pub/sub message is created to test using a time attribute different than default publish_time one.
 
 The publisher produces several messages with:
 <ol>
@@ -116,4 +118,12 @@ The window is set to 60 seconds and the allowed_lateness is set to 5 minutes, an
 
 If you want to test messages published with an old timestamp you can adjust
 inside the publish_messages method in pubsub.py how old they should be
+
+<h1>Useful links</h1>
+
+<a href="https://www.oreilly.com/radar/the-world-beyond-batch-streaming-101/">Streaming 101: The world beyond batch</a>
+
+<a href="https://www.oreilly.com/radar/the-world-beyond-batch-streaming-102/">Streaming 102: The world beyond batch</a>
+
+<a href="https://beam.apache.org/blog/test-stream/">Testing Unbounded Pipelines in Apache Beam</a>
 
