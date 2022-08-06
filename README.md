@@ -1,9 +1,9 @@
 # bq-ingestion
-POC about BigQuery ingestion that generates pub/sub messages that are consumed by a dataflow job that generates output AVRO files in different folders based on their AVRO schema.
+POC about BigQuery ingestion that generates pub/sub messages that are consumed by an Apache Beam job that generates output AVRO files in different folders based on their AVRO schema.
 
 It creates a pub/sub topic and subscription. All pub/sub messages are created with a <b>schema_id</b> attribute that specified the schema version used to generate the AVRO encoded payload.
 
-A message_time attribute is added when the pub/sub message is created to test using a time attribute different than default publish_time one.
+Custom ext_message_id and ext_message_time are also attached as pub/sub attributes.
 
 The publisher produces several messages with:
 <ol>
@@ -13,7 +13,7 @@ The publisher produces several messages with:
     <li>An invalid payload and a valid schema_id attribute</li>
 </ol>
 
-The subscriber is a Dataflow job that processes messages:
+The subscriber is an Apache Beam job that processes messages:
 <ul>
     <li>For cases 1 and 2 it processes business as usual because it already knows that they are known schemas</li>
     <li>For case 3, it uses the <b>writer schema</b> to consume these messages simulating a new schema_id being deployed in the source system</li>
@@ -69,7 +69,7 @@ $(gcloud beta emulators pubsub env-init)
 python create_pubsub_resources.py
 ```
 
-<h2>Start the Subscriber (Dataflow job with DirectRunner)</h2>
+<h2>Start the Subscriber (Apache Beam job with DirectRunner)</h2>
 
 ```
 python subscriber.py
@@ -114,7 +114,7 @@ bq load --source_format=AVRO --hive_partitioning_mode=CUSTOM --hive_partitioning
 ```
 
 <h2>Testing late events arrival</h2>
-The window is set to 60 seconds and the allowed_lateness is set to 5 minutes, anything older is discarded by Dataflow. 
+The window is set to 60 seconds and the allowed_lateness is set to 5 minutes, anything older is discarded by Apache Beam. 
 
 If you want to test messages published with an old timestamp you can adjust
 inside the publish_messages method in pubsub.py how old they should be
