@@ -110,3 +110,10 @@ Once the files are created, you can ingest them into BigQuery with the following
 ```
 bq load --source_format=AVRO --hive_partitioning_mode=CUSTOM --hive_partitioning_source_uri_prefix="gs://<bucket_name>/transactions/{dt:DATE}" <dataset_name>.<table_name> gs://<bucket_name>/transactions/dt=<date>/<schemaId>/*
 ```
+
+<h2>Testing late events arrival</h2>
+The allowed_lateness is set to 5 minutes, anything older is discarded by Dataflow. 
+
+If you want to test messages published with an old timestamp you can adjust
+inside the publish_messages method in pubsub.py how old they should be
+

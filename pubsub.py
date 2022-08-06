@@ -40,7 +40,7 @@ class PubSubManager:
     def publish_messages(self, topic_name, messages, sleep=1, schema_id=""):
         for msg in messages:
             message_identifier = str(uuid.uuid4())
-            date = datetime.datetime.utcnow()
+            date = datetime.datetime.utcnow() - datetime.timedelta(minutes=10)
             utc_time = calendar.timegm(date.utctimetuple())
             message_time = str(utc_time)
             self.logger.info(f"Publishing message_identifier={message_identifier} with timestamp={date} and schema_id={schema_id}")
