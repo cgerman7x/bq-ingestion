@@ -112,7 +112,7 @@ bq load --source_format=AVRO --hive_partitioning_mode=CUSTOM --hive_partitioning
 ```
 
 <h2>Testing late events arrival</h2>
-The allowed_lateness is set to 5 minutes, anything older is discarded by Dataflow. 
+The window is set to 60 seconds and the allowed_lateness is set to 5 minutes, anything older is discarded by Dataflow. 
 
 If you want to test messages published with an old timestamp you can adjust
 inside the publish_messages method in pubsub.py how old they should be

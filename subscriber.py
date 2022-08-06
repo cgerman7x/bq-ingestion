@@ -59,9 +59,11 @@ class WriteToFile(DoFn):
     @staticmethod
     def write_avro_file(schema_id, avro_messages, parsed_schema, shard_id, window):
         ts_format = "%Y%m%d_%H%M%S"
+        ts_format_with_ms = "%Y%m%d_%H%M%S_%f"
         window_start = window.start.to_utc_datetime().strftime(ts_format)
         window_end = window.end.to_utc_datetime().strftime(ts_format)
         technical_date = datetime.now(timezone.utc)
+        point_in_time = technical_date.strftime(ts_format_with_ms)
 
         relative_path = ""
         if len(avro_messages) > 0:
@@ -72,7 +74,7 @@ class WriteToFile(DoFn):
             relative_path = os.path.join(prefix_folder, dt, schema_folder)
             full_path = WriteToFile.create_directory(relative_path)
 
-            filename = "-".join(["messages", window_start, window_end, str(shard_id)]) + ".avro"
+            filename = "-".join(["messages", window_start, window_end, point_in_time, str(shard_id)]) + ".avro"
             full_path_file_name = os.path.join(full_path, filename)
             with open(full_path_file_name, "wb") as f:
                 writer(f, parsed_schema, avro_messages)
@@ -127,11 +129,15 @@ def main():
 
     p = beam.Pipeline(options=options)
 
-    window_size = 10
+    # 1 minute window
+    window_size = 60
+    # Shards start with 0
     num_shards = 3
     # Only allow events up to 5 minutes behind the watermark
     allowed_lateness = 60*5
+    # We only know these schemas
     valid_schemas = ["schemaV1", "schemaV2"]
+
     parsed_schemas = {}
 
     for schema_id in valid_schemas:

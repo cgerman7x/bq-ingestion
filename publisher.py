@@ -86,10 +86,10 @@ def main():
                                                         schema_id="schemaV1"))
     p5.start()
     p1.join()
-    p2.join()
-    p3.join()
-    p4.join()
-    p5.join()
+    # p2.join()
+    # p3.join()
+    # p4.join()
+    # p5.join()
 
 
 if __name__ == '__main__':
