@@ -1,7 +1,8 @@
 # bq-ingestion
-POC about BigQuery ingestion that generates pub/sub messages that are consumed by an Apache Beam job that generates output AVRO files in different folders based on their AVRO schema.
+POC about BigQuery ingestion that generates messages using the local pub/sub emulator that are consumed by an Apache Beam job that writes output AVRO files in different folders based on their AVRO schema.
 
-It creates a pub/sub topic and subscription. All pub/sub messages are created with a <b>schema_id</b> attribute that specified the schema version used to generate the AVRO encoded payload.
+It creates a pub/sub topic and subscription as first step. Then, all pub/sub messages are created with a <b>schema_id</b> attribute that specified the schema version used to generate the AVRO encoded payload. 
+The important concept here is that the schema is always embedded in the message and in the output AVRO file. 
 
 Custom ext_message_id and ext_message_time are also attached as pub/sub attributes.
 
@@ -117,7 +118,7 @@ bq load --source_format=AVRO --hive_partitioning_mode=CUSTOM --hive_partitioning
 The window is set to 60 seconds and the allowed_lateness is set to 5 minutes, anything older is discarded by Apache Beam. 
 
 If you want to test messages published with an old timestamp you can adjust
-inside the publish_messages method in pubsub.py how old they should be
+inside the publish_messages method in pubsub.py how old they should be.
 
 <h1>Useful links</h1>
 
