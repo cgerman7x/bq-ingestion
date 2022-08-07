@@ -122,9 +122,29 @@ inside the publish_messages method in pubsub.py how old they should be.
 
 <h1>Useful links</h1>
 
+<h2>About AVRO specification and implementations</h2>
+<a href="https://avro.apache.org/docs/1.11.0/gettingstartedpython.html">Apache AVRO</a>
+
+<a href="https://fastavro.readthedocs.io/en/latest/#">fastavro</a>
+
+<h2>About streaming</h2>
 <a href="https://www.oreilly.com/radar/the-world-beyond-batch-streaming-101/">Streaming 101: The world beyond batch</a>
 
 <a href="https://www.oreilly.com/radar/the-world-beyond-batch-streaming-102/">Streaming 102: The world beyond batch</a>
 
+<h2>About Apache Beam</h2>
+<a href="https://beam.apache.org/documentation/programming-guide/">Apache Beam Programming Guide</a>
+
+<a href="https://github.com/apache/beam/tree/master/sdks/python/apache_beam">Apache Beam Python SDK</a>
+
 <a href="https://beam.apache.org/blog/test-stream/">Testing Unbounded Pipelines in Apache Beam</a>
 
+<h2>About Pub/Sub</h2>
+<a href="https://cloud.google.com/pubsub/docs/emulator">Testing apps locally with the emulator</a>
+
+<a href="https://googleapis.dev/python/pubsub/latest/index.html">Python Client for Google Cloud Pub/Sub</a>
+
+<a href="https://cloud.google.com/pubsub/docs/stream-messages-dataflow">Stream messages from Pub/Sub by using Dataflow</a>
+
+<h2>About BigQuery</h2>
+<a href="https://cloud.google.com/bigquery/docs/hive-partitioned-loads-gcs#bq">Loading externally partitioned data</a>
