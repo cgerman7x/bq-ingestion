@@ -44,10 +44,14 @@ class WriteToFile(DoFn):
 
     @staticmethod
     def get_writer_schema(message):
-        bytes_reader = BytesIO(message.data)
-        record = reader(bytes_reader)
+        try:
+            bytes_reader = BytesIO(message.data)
+            record = reader(bytes_reader)
+            writer_schema = record.writer_schema
+        except:
+            writer_schema = None
 
-        return record.writer_schema
+        return writer_schema
 
     @staticmethod
     def create_directory(relative_path):
@@ -109,16 +113,20 @@ class WriteToFile(DoFn):
             elif len(schema_id) > 0:
                 logging.warning(f'Received a message with an unknown schema_id attribute {schema_id}')
                 writer_schema = WriteToFile.get_writer_schema(message)
-                self.parsed_schemas.setdefault(schema_id, writer_schema)
 
-                try:
-                    message_decoded = WriteToFile.decode_message(self.parsed_schemas[schema_id],
-                                                                 message)
-                    if message_decoded:
-                        avro_messages.setdefault(schema_id, [])
-                        avro_messages[f'{schema_id}'].append(message_decoded)
-                except Exception as e:
-                    logging.error(f'Unable to parse message {message} with unknown schema_id attribute {schema_id}')
+                if writer_schema:
+                    self.parsed_schemas.setdefault(schema_id, writer_schema)
+
+                    try:
+                        message_decoded = WriteToFile.decode_message(self.parsed_schemas[schema_id],
+                                                                     message)
+                        if message_decoded:
+                            avro_messages.setdefault(schema_id, [])
+                            avro_messages[f'{schema_id}'].append(message_decoded)
+                    except Exception as e:
+                        logging.error(f'Unable to parse message {message} with unknown schema_id attribute {schema_id}')
+                else:
+                    logging.error(f'Unable to get schema from message {message} with unknown schema_id attribute {schema_id}')
             else:
                 logging.error('Received a message without schema_id attribute')
 

@@ -8,10 +8,11 @@ Custom ext_message_id and ext_message_time are also attached as pub/sub attribut
 
 The publisher produces several messages with:
 <ol>
-    <li>A valid schema_id attribute that the subscriber knows</li>
-    <li>An unknown schema_id attribute</li>
-    <li>An invalid payload and no schema_id attribute</li>
-    <li>An invalid payload and a valid schema_id attribute</li>
+    <li>A valid schema_id attribute that the subscriber knows (schema embedded)</li>
+    <li>An unknown schema_id attribute (schema embedded)</li>
+    <li>An invalid payload and no schema_id attribute (schema embedded)</li>
+    <li>An invalid payload and a valid schema_id attribute (schema embedded)</li>
+    <li>An unknown schema_id attribute (schema-less)</li>
 </ol>
 
 The subscriber is an Apache Beam job that processes messages:
@@ -19,6 +20,7 @@ The subscriber is an Apache Beam job that processes messages:
     <li>For cases 1 and 2 it processes business as usual because it already knows that they are known schemas</li>
     <li>For case 3, it uses the <b>writer schema</b> to consume these messages simulating a new schema_id being deployed in the source system</li>
     <li>For case 4, it generates an error message</li>
+    <li>For case 5, it generates an error message because it is not able to get the writer schema from the message</li>
 </ul>
 
 <h1>Install python packages</h1>

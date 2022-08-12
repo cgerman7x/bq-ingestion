@@ -1,5 +1,5 @@
 from fastavro.utils import generate_many
-from fastavro import parse_schema, writer
+from fastavro import parse_schema, writer, schemaless_writer
 from io import BytesIO
 import json
 import pubsub
@@ -12,6 +12,12 @@ def generate_fake_data(parsed_schema, amount=1):
 def encode_message(parsed_schema, message):
     bytes_writer = BytesIO()
     writer(bytes_writer, parsed_schema, [message])
+    return bytes_writer.getvalue()
+
+
+def encode_schemaless_message(parsed_schema, message):
+    bytes_writer = BytesIO()
+    schemaless_writer(bytes_writer, parsed_schema, message)
     return bytes_writer.getvalue()
 
 
@@ -42,7 +48,7 @@ def main():
         for msg in fake_data:
             avro_messages_v2.append(encode_message(parsed_schema, msg))
 
-    # Generate valid messages for schemaV3 -> they won't be processed because the schema is not whitelisted
+    # Generate valid messages for schemaV3 -> they will be processed besides the schema is not whitelisted
     avro_messages_v3 = []
     with open('schemas/schemaV3.avsc', 'rb') as f:
         avro_schema = json.loads(f.read())
@@ -52,6 +58,17 @@ def main():
 
         for msg in fake_data:
             avro_messages_v3.append(encode_message(parsed_schema, msg))
+
+    # Generate valid messages for schemaV4-> they won't be processed because the message is schema-less
+    avro_messages_v4 = []
+    with open('schemas/schemaV4.avsc', 'rb') as f:
+        avro_schema = json.loads(f.read())
+        parsed_schema = parse_schema(avro_schema)
+
+        fake_data = generate_fake_data(parsed_schema, 10)
+
+        for msg in fake_data:
+            avro_messages_v4.append(encode_schemaless_message(parsed_schema, msg))
 
     # Generate invalid message without schema_id attribute -> they won't be processed
     avro_messages_no_version = [b'invalid message & no schema_id']
@@ -76,20 +93,26 @@ def main():
                                                         schema_id="schemaV3"))
     p3.start()
     p4 = Process(target=pubsub_manager.publish_messages(topic,
+                                                        avro_messages_v4,
+                                                        sleep=0.1,
+                                                        schema_id="schemaV4"))
+    p4.start()
+    p5 = Process(target=pubsub_manager.publish_messages(topic,
                                                         avro_messages_no_version,
                                                         sleep=0.1,
                                                         schema_id=""))
-    p4.start()
-    p5 = Process(target=pubsub_manager.publish_messages(topic,
+    p5.start()
+    p6 = Process(target=pubsub_manager.publish_messages(topic,
                                                         avro_messages_invalid_msg,
                                                         sleep=0.1,
                                                         schema_id="schemaV1"))
-    p5.start()
+    p6.start()
     p1.join()
-    # p2.join()
-    # p3.join()
-    # p4.join()
-    # p5.join()
+    p2.join()
+    p3.join()
+    p4.join()
+    p5.join()
+    p6.join()
 
 
 if __name__ == '__main__':
