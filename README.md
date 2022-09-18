@@ -87,6 +87,7 @@ python publisher.py
 ```
 
 <h2>Create tables in BigQuery</h2>
+The field used for partitioning, that will be populated dynamically from the folder's name using the bq command, should be created as nullable or the ingestion will fail. 
 
 ```
 CREATE TABLE `<project_id>.<dataset_name>.schemaV1`
