@@ -2,9 +2,11 @@
 POC about BigQuery ingestion that generates messages using the local pub/sub emulator that are consumed by an Apache Beam job that writes output AVRO files in different folders based on their AVRO schema.
 
 It creates a pub/sub topic and subscription as first step. Then, all pub/sub messages are created with a <b>schema_id</b> attribute that specified the schema version used to generate the AVRO encoded payload. 
-The important concept here is that the schema is always embedded in the message and in the output AVRO file. 
+Note: the schema is always embedded in the message and also in the output AVRO file.
 
-Custom ext_message_id and ext_message_time are also attached as pub/sub attributes.
+Custom ext_message_id and ext_message_time (used as business date of transaction) are also attached as pub/sub attributes.
+
+The attribute ext_message_time is used as business timestamp of transaction if you want to test late events arrivals. It can also be disabled from the subscriber in order to allow the use of the pub/sub publish time.
 
 The publisher produces several messages with:
 <ol>
@@ -122,6 +124,29 @@ The window is set to 60 seconds and the allowed_lateness is set to 5 minutes, an
 If you want to test messages published with an old timestamp you can adjust
 inside the publish_messages method in pubsub.py how old they should be.
 
+<h2>Replay of messages</h2>
+As the subscription is created with retain_acked_messages set to "true", messages can be replayed from the local pub/sub emulator.
+
+First, you need to redirect the API calls to the local pub/sub emulator or the gcloud command will fail:
+
+```
+gcloud config set api_endpoint_overrides/pubsub http://localhost:8085/
+```
+
+Then, you can execute the following commands (Linux example) to replay all messages from a point in time on wards:
+
+```
+export TS_FORMAT=%Y-%m-%dT%H:%M:%SZ
+
+gcloud pubsub subscriptions seek projects/operating-day-317714/subscriptions/target-subscription --time=$(date -u -d '-15 min' +$TS_FORMAT)
+```
+
+To restore the API calls to the default value:
+
+```
+gcloud config unset api_endpoint_overrides/pubsub
+```
+
 <h1>Useful links</h1>
 
 <h2>About AVRO specification and implementations</h2>
@@ -147,6 +172,8 @@ inside the publish_messages method in pubsub.py how old they should be.
 <a href="https://googleapis.dev/python/pubsub/latest/index.html">Python Client for Google Cloud Pub/Sub</a>
 
 <a href="https://cloud.google.com/pubsub/docs/stream-messages-dataflow">Stream messages from Pub/Sub by using Dataflow</a>
+
+<a href="https://cloud.google.com/pubsub/docs/replay-message">Replay a message in Pub/Sub by seeking to a snapshot or timestamp</a>
 
 <h2>About BigQuery</h2>
 <a href="https://cloud.google.com/bigquery/docs/hive-partitioned-loads-gcs#bq">Loading externally partitioned data</a>

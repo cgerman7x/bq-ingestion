@@ -30,6 +30,13 @@ class GroupMessagesByFixedWindows(PTransform):
         )
 
 
+class GetTimestampFn(beam.DoFn):
+    def process(self, element, timestamp=beam.DoFn.TimestampParam):
+        timestamp_utc = datetime.utcfromtimestamp(float(timestamp))
+        logging.info("Pub/Sub publish time: %s", timestamp_utc.strftime("%Y-%m-%d %H:%M:%S"))
+        yield element
+
+
 class WriteToFile(DoFn):
     def __init__(self, valid_schemas, parsed_schemas):
         self.valid_schemas = valid_schemas
@@ -161,8 +168,9 @@ def main():
 
     pubsub_pipeline = (
             p
-            | 'Read from pubsub topic' >> beam.io.ReadFromPubSub(subscription=target_subscription,
+            | 'Read from Pub/Sub topic' >> beam.io.ReadFromPubSub(subscription=target_subscription,
                                                                  with_attributes=True)
+            | 'Print Pub/Sub publish time' >> ParDo(GetTimestampFn())
             | 'GroupMessagesByFixedWindows' >> GroupMessagesByFixedWindows(window_size=window_size,
                                                                            num_shards=num_shards,
                                                                            allowed_lateness=allowed_lateness)

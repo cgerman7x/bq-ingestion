@@ -28,7 +28,7 @@ class PubSubManager:
     def create_subscription(self, topic, subscription_id):
         subscription_path = self.subscriber.subscription_path(self.project_id, subscription_id)
         subscription = self.subscriber.create_subscription(
-            request={"name": subscription_path, "topic": topic.name}
+            request={"name": subscription_path, "topic": topic.name, "retain_acked_messages": True}
         )
         self.logger.info(f"Subscription created: {subscription.name}")
         return subscription
